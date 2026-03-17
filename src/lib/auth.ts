@@ -6,6 +6,7 @@ import { prisma } from "./prisma";
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
+      id: "credentials",
       credentials: {
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
@@ -23,6 +24,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           user.password
         );
         if (!valid) return null;
+
+        return { id: user.id, name: user.name ?? user.username };
+      },
+    }),
+    Credentials({
+      id: "passcode",
+      credentials: {
+        passcode: { label: "Passcode", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.passcode) return null;
+
+        const passcode = credentials.passcode as string;
+
+        // Find user with matching passcode
+        const user = await prisma.user.findFirst({
+          where: { passcode },
+        });
+        if (!user) return null;
 
         return { id: user.id, name: user.name ?? user.username };
       },

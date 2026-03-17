@@ -22,6 +22,7 @@ export default function Header({ title, showBack = false }: HeaderProps) {
   const [username, setUsername] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [newPasscode, setNewPasscode] = useState("");
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -34,10 +35,12 @@ export default function Header({ title, showBack = false }: HeaderProps) {
     setSuccess("");
     setCurrentPassword("");
     setNewPassword("");
+    setNewPasscode("");
     try {
       const res = await fetch("/api/user");
       const data = await res.json();
       if (data.username) setUsername(data.username);
+      if (data.passcode) setNewPasscode(data.passcode);
     } catch {
       // ignore
     }
@@ -56,7 +59,7 @@ export default function Header({ title, showBack = false }: HeaderProps) {
     const res = await fetch("/api/user", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, currentPassword, newPassword: newPassword || undefined }),
+      body: JSON.stringify({ username, currentPassword, newPassword: newPassword || undefined, newPasscode: newPasscode || undefined }),
     });
     const data = await res.json();
 
@@ -197,6 +200,24 @@ export default function Header({ title, showBack = false }: HeaderProps) {
                 {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              Passcode <span className="text-slate-400 dark:text-slate-500 font-normal">(4 digits)</span>
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
+              value={newPasscode}
+              onChange={(e) => {
+                const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                setNewPasscode(v);
+              }}
+              className={INPUT_CLASS}
+              placeholder="e.g., 1234"
+            />
           </div>
 
           <button

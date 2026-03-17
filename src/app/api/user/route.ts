@@ -7,12 +7,10 @@ async function getUser() {
   const session = await auth();
   if (!session?.user) return null;
 
-  // Try by ID first, fallback to finding by name
   if (session.user.id) {
     return prisma.user.findUnique({ where: { id: session.user.id } });
   }
 
-  // Fallback: find first user (for single-user app)
   return prisma.user.findFirst();
 }
 
@@ -24,6 +22,7 @@ export async function GET() {
     id: user.id,
     username: user.username,
     name: user.name,
+    passcode: user.passcode,
   });
 }
 
@@ -31,13 +30,13 @@ export async function PUT(req: NextRequest) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { username, currentPassword, newPassword } = await req.json();
+  const { username, currentPassword, newPassword, newPasscode } = await req.json();
 
   // Verify current password
   const valid = await bcrypt.compare(currentPassword, user.password);
   if (!valid) return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 });
 
-  const updateData: { username?: string; password?: string } = {};
+  const updateData: { username?: string; password?: string; passcode?: string } = {};
 
   if (username && username !== user.username) {
     const existing = await prisma.user.findUnique({ where: { username } });
@@ -50,6 +49,13 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "New password must be at least 6 characters" }, { status: 400 });
     }
     updateData.password = await bcrypt.hash(newPassword, 12);
+  }
+
+  if (newPasscode !== undefined) {
+    if (newPasscode && !/^\d{4}$/.test(newPasscode)) {
+      return NextResponse.json({ error: "Passcode must be exactly 4 digits" }, { status: 400 });
+    }
+    updateData.passcode = newPasscode || undefined;
   }
 
   if (Object.keys(updateData).length === 0) {
