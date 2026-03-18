@@ -7,6 +7,7 @@ import Header from "@/components/ui/Header";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EmptyState from "@/components/ui/EmptyState";
+import SortableList from "@/components/ui/SortableList";
 
 interface Room {
   id: string;
@@ -31,6 +32,7 @@ export default function RoomsPage({
   const [deleteRoom, setDeleteRoom] = useState<Room | null>(null);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
   const router = useRouter();
 
   const fetchData = useCallback(async () => {
@@ -80,6 +82,18 @@ export default function RoomsPage({
     fetchData();
   }
 
+  async function handleReorder(reordered: Room[]) {
+    setRooms(reordered);
+    await fetch("/api/reorder", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "room",
+        items: reordered.map((r, i) => ({ id: r.id, order: i })),
+      }),
+    });
+  }
+
   async function handleDelete() {
     if (!deleteRoom) return;
     setSaving(true);
@@ -91,7 +105,7 @@ export default function RoomsPage({
 
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
-      <Header title={subjectName || "Rooms"} showBack />
+      <Header title={subjectName || "Rooms"} showBack reorderMode={reorderMode} onToggleReorder={() => setReorderMode((v) => !v)} />
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         {loading ? (
@@ -105,15 +119,16 @@ export default function RoomsPage({
             icon={<DoorOpen size={28} />}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {rooms.map((room, i) => (
+          <SortableList
+            items={rooms}
+            enabled={reorderMode}
+            onReorder={handleReorder}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            renderItem={(room, i) => (
               <div
-                key={room.id}
-                className="rounded-2xl bg-white dark:bg-slate-900 p-4 cursor-pointer hover:shadow-lg dark:hover:shadow-slate-950/30 transition-all duration-200 active:scale-[0.98] ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-sm dark:shadow-slate-950/20 animate-fade-in"
+                className={`rounded-2xl bg-white dark:bg-slate-900 p-4 ${reorderMode ? "" : "cursor-pointer hover:shadow-lg dark:hover:shadow-slate-950/30 active:scale-[0.98]"} transition-all duration-200 ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-sm dark:shadow-slate-950/20 animate-fade-in`}
                 style={{ animationDelay: `${i * 50}ms` }}
-                onClick={() =>
-                  router.push(`/categories/${categoryId}/${subjectId}/${room.id}`)
-                }
+                onClick={() => !reorderMode && router.push(`/categories/${categoryId}/${subjectId}/${room.id}`)}
               >
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-md shadow-emerald-200 dark:shadow-emerald-950/20 flex items-center justify-center text-white shrink-0">
@@ -142,34 +157,40 @@ export default function RoomsPage({
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => { setEditRoom(room); setName(room.name); }}
-                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                    >
-                      <Pencil size={13} />
-                    </button>
-                    <button
-                      onClick={() => setDeleteRoom(room)}
-                      className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                  <ChevronRight size={16} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                  {!reorderMode && (
+                    <>
+                      <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => { setEditRoom(room); setName(room.name); }}
+                          className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteRoom(room)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                      <ChevronRight size={16} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                    </>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          />
         )}
       </main>
 
-      <button
-        onClick={() => { setShowCreate(true); setName(""); }}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl shadow-lg shadow-blue-300 dark:shadow-blue-950/30 flex items-center justify-center hover:shadow-xl active:scale-95 transition-all z-30"
-      >
-        <Plus size={22} strokeWidth={2.5} />
-      </button>
+      {!reorderMode && (
+        <button
+          onClick={() => { setShowCreate(true); setName(""); }}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl shadow-lg shadow-blue-300 dark:shadow-blue-950/30 flex items-center justify-center hover:shadow-xl active:scale-95 transition-all z-30"
+        >
+          <Plus size={22} strokeWidth={2.5} />
+        </button>
+      )}
 
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Room">
         <form onSubmit={handleCreate} className="space-y-4">

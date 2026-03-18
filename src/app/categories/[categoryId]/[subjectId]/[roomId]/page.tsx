@@ -15,6 +15,8 @@ import {
   X,
   Eye,
   Clock,
+  Copy,
+  Check,
 } from "lucide-react";
 import NextImage from "next/image";
 import Header from "@/components/ui/Header";
@@ -76,6 +78,7 @@ export default function RoomPage({
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [editNote, setEditNote] = useState<Note | null>(null);
+  const [editLink, setEditLink] = useState<LinkItem | null>(null);
   const [deleteItem, setDeleteItem] = useState<{
     type: "note" | "link" | "file";
     id: string;
@@ -88,6 +91,7 @@ export default function RoomPage({
   const [linkTitle, setLinkTitle] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [saving, setSaving] = useState(false);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
   const fetchRoom = useCallback(async () => {
@@ -137,16 +141,29 @@ export default function RoomPage({
     e.preventDefault();
     if (!linkUrl.trim()) return;
     setSaving(true);
-    await fetch("/api/links", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: linkTitle.trim() || null, url: linkUrl.trim(), roomId }),
-    });
-    setLinkTitle("");
-    setLinkUrl("");
-    setShowLinkModal(false);
+    if (editLink) {
+      await fetch(`/api/links/${editLink.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: linkTitle.trim() || null, url: linkUrl.trim() }),
+      });
+    } else {
+      await fetch("/api/links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: linkTitle.trim() || null, url: linkUrl.trim(), roomId }),
+      });
+    }
+    resetLinkForm();
     setSaving(false);
     fetchRoom();
+  }
+
+  function resetLinkForm() {
+    setLinkTitle("");
+    setLinkUrl("");
+    setEditLink(null);
+    setShowLinkModal(false);
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -224,7 +241,16 @@ export default function RoomPage({
               }`}
             >
               {tab.icon}
-              {tab.label}
+              <span className="truncate">{tab.label}</span>
+              {tab.count > 0 && (
+                <span className={`min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold leading-none px-1 ${
+                  activeTab === tab.key
+                    ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                }`}>
+                  {tab.count}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -307,6 +333,27 @@ export default function RoomPage({
                     >
                       <ExternalLink size={15} />
                     </a>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(link.url);
+                        setCopiedLinkId(link.id);
+                        setTimeout(() => setCopiedLinkId(null), 2000);
+                      }}
+                      className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                    >
+                      {copiedLinkId === link.id ? <Check size={15} className="text-green-500" /> : <Copy size={15} />}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditLink(link);
+                        setLinkTitle(link.title || "");
+                        setLinkUrl(link.url);
+                        setShowLinkModal(true);
+                      }}
+                      className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                    >
+                      <Pencil size={15} />
+                    </button>
                     <button
                       onClick={() => setDeleteItem({ type: "link", id: link.id, name: link.title || link.url })}
                       className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
@@ -393,7 +440,7 @@ export default function RoomPage({
       <button
         onClick={() => {
           if (activeTab === "notes") { setEditNote(null); setNoteTitle(""); setNoteContent(""); setShowNoteModal(true); }
-          else if (activeTab === "links") { setLinkTitle(""); setLinkUrl(""); setShowLinkModal(true); }
+          else if (activeTab === "links") { setEditLink(null); setLinkTitle(""); setLinkUrl(""); setShowLinkModal(true); }
           else { setShowUploadModal(true); }
         }}
         className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl shadow-lg shadow-blue-300 dark:shadow-blue-950/30 flex items-center justify-center hover:shadow-xl active:scale-95 transition-all z-30"
@@ -419,7 +466,7 @@ export default function RoomPage({
       </Modal>
 
       {/* Link Modal */}
-      <Modal open={showLinkModal} onClose={() => setShowLinkModal(false)} title="Add Link">
+      <Modal open={showLinkModal} onClose={resetLinkForm} title={editLink ? "Edit Link" : "Add Link"}>
         <form onSubmit={handleSaveLink} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Title</label>
@@ -430,7 +477,7 @@ export default function RoomPage({
             <input type="url" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://example.com" className={INPUT_CLASS} autoFocus required />
           </div>
           <button type="submit" disabled={saving || !linkUrl.trim()} className={BTN_PRIMARY}>
-            {saving ? "Saving..." : "Save Link"}
+            {saving ? "Saving..." : editLink ? "Update Link" : "Save Link"}
           </button>
         </form>
       </Modal>

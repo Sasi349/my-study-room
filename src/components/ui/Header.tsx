@@ -4,18 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import Image from "next/image";
-import { ArrowLeft, LogOut, Settings, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, LogOut, Settings, Eye, EyeOff, ArrowUpDown, Check } from "lucide-react";
 import Modal from "./Modal";
 import ThemeToggle from "./ThemeToggle";
+import { useLongPress } from "@/hooks/useLongPress";
 
 const INPUT_CLASS = "w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white dark:focus:bg-slate-800 transition-colors";
 
 interface HeaderProps {
   title: string;
   showBack?: boolean;
+  reorderMode?: boolean;
+  onToggleReorder?: () => void;
 }
 
-export default function Header({ title, showBack = false }: HeaderProps) {
+export default function Header({ title, showBack = false, reorderMode, onToggleReorder }: HeaderProps) {
   const router = useRouter();
   const [showLogout, setShowLogout] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -28,6 +31,7 @@ export default function Header({ title, showBack = false }: HeaderProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const longPressHandlers = useLongPress(() => onToggleReorder?.(), 700);
 
   async function openSettings() {
     setShowSettings(true);
@@ -90,7 +94,7 @@ export default function Header({ title, showBack = false }: HeaderProps) {
               </button>
             )}
             {title === "My Study Room" ? (
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5" {...(onToggleReorder ? longPressHandlers : {})} style={{ userSelect: "none", touchAction: "none" }}>
                 <Image src="/icon.png" alt="My Study Room" width={36} height={36} className="rounded-xl object-cover shadow-sm" priority />
                 <div className="flex flex-col -space-y-0.5">
                   <h1 className="text-[15px] font-extrabold tracking-tight leading-tight bg-gradient-to-r from-blue-600 via-blue-500 to-emerald-500 dark:from-blue-400 dark:via-blue-300 dark:to-emerald-400 bg-clip-text text-transparent">
@@ -102,9 +106,19 @@ export default function Header({ title, showBack = false }: HeaderProps) {
                 </div>
               </div>
             ) : (
-              <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate tracking-tight">
+              <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate tracking-tight" {...(onToggleReorder ? longPressHandlers : {})} style={{ userSelect: "none", touchAction: "none" }}>
                 {title}
               </h1>
+            )}
+            {reorderMode && (
+              <button
+                onClick={onToggleReorder}
+                className="flex items-center gap-1 ml-2 px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs font-semibold shrink-0 hover:bg-blue-200 dark:hover:bg-blue-950/60 transition-colors"
+              >
+                <ArrowUpDown size={12} />
+                Reorder
+                <Check size={12} />
+              </button>
             )}
           </div>
           <div className="flex items-center gap-0.5">

@@ -7,6 +7,7 @@ import Header from "@/components/ui/Header";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EmptyState from "@/components/ui/EmptyState";
+import SortableList from "@/components/ui/SortableList";
 
 interface Category {
   id: string;
@@ -26,6 +27,7 @@ export default function CategoriesPage() {
   const [deleteCategory, setDeleteCategory] = useState<Category | null>(null);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
   const router = useRouter();
 
   const fetchCategories = useCallback(async () => {
@@ -78,6 +80,18 @@ export default function CategoriesPage() {
     fetchCategories();
   }
 
+  async function handleReorder(reordered: Category[]) {
+    setCategories(reordered);
+    await fetch("/api/reorder", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "category",
+        items: reordered.map((c, i) => ({ id: c.id, order: i })),
+      }),
+    });
+  }
+
   const gradients = [
     "from-blue-500 to-blue-600",
     "from-emerald-500 to-emerald-600",
@@ -98,7 +112,7 @@ export default function CategoriesPage() {
 
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
-      <Header title="My Study Room" />
+      <Header title="My Study Room" reorderMode={reorderMode} onToggleReorder={() => setReorderMode((v) => !v)} />
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         {loading ? (
@@ -111,13 +125,16 @@ export default function CategoriesPage() {
             description="Create your first category to get started"
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categories.map((cat, i) => (
+          <SortableList
+            items={categories}
+            enabled={reorderMode}
+            onReorder={handleReorder}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            renderItem={(cat, i) => (
               <div
-                key={cat.id}
-                className={`rounded-2xl bg-white dark:bg-slate-900 p-4 cursor-pointer hover:shadow-lg dark:hover:shadow-slate-950/30 transition-all duration-200 active:scale-[0.98] ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-sm dark:shadow-slate-950/20 animate-fade-in`}
+                className={`rounded-2xl bg-white dark:bg-slate-900 p-4 ${reorderMode ? "" : "cursor-pointer hover:shadow-lg dark:hover:shadow-slate-950/30 active:scale-[0.98]"} transition-all duration-200 ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-sm dark:shadow-slate-950/20 animate-fade-in`}
                 style={{ animationDelay: `${i * 50}ms` }}
-                onClick={() => router.push(`/categories/${cat.id}`)}
+                onClick={() => !reorderMode && router.push(`/categories/${cat.id}`)}
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradients[i % gradients.length]} shadow-md ${shadows[i % shadows.length]} flex items-center justify-center text-white shrink-0`}>
@@ -129,34 +146,40 @@ export default function CategoriesPage() {
                       {cat._count.subjects} {cat._count.subjects === 1 ? "subject" : "subjects"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => { setEditCategory(cat); setName(cat.name); }}
-                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                    >
-                      <Pencil size={13} />
-                    </button>
-                    <button
-                      onClick={() => setDeleteCategory(cat)}
-                      className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                  <ChevronRight size={16} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                  {!reorderMode && (
+                    <>
+                      <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => { setEditCategory(cat); setName(cat.name); }}
+                          className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteCategory(cat)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                      <ChevronRight size={16} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                    </>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          />
         )}
       </main>
 
-      <button
-        onClick={() => { setShowCreate(true); setName(""); }}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl shadow-lg shadow-blue-300 dark:shadow-blue-950/30 flex items-center justify-center hover:shadow-xl active:scale-95 transition-all z-30"
-      >
-        <Plus size={22} strokeWidth={2.5} />
-      </button>
+      {!reorderMode && (
+        <button
+          onClick={() => { setShowCreate(true); setName(""); }}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl shadow-lg shadow-blue-300 dark:shadow-blue-950/30 flex items-center justify-center hover:shadow-xl active:scale-95 transition-all z-30"
+        >
+          <Plus size={22} strokeWidth={2.5} />
+        </button>
+      )}
 
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Category">
         <form onSubmit={handleCreate} className="space-y-4">
