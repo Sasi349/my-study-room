@@ -7,7 +7,7 @@ export async function PATCH(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { model, items } = await req.json() as {
-    model: "category" | "subject" | "room";
+    model: "category" | "subject" | "room" | "note" | "link" | "file" | "streak";
     items: { id: string; order: number }[];
   };
 
@@ -15,7 +15,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "model and items required" }, { status: 400 });
   }
 
-  if (!["category", "subject", "room"].includes(model)) {
+  if (!["category", "subject", "room", "note", "link", "file", "streak"].includes(model)) {
     return NextResponse.json({ error: "Invalid model" }, { status: 400 });
   }
 
@@ -30,6 +30,18 @@ export async function PATCH(req: NextRequest) {
           break;
         case "room":
           await tx.room.update({ where: { id }, data: { order } });
+          break;
+        case "note":
+          await tx.note.update({ where: { id }, data: { order } });
+          break;
+        case "link":
+          await tx.link.update({ where: { id }, data: { order } });
+          break;
+        case "file":
+          await tx.file.update({ where: { id }, data: { order } });
+          break;
+        case "streak":
+          await tx.streak.update({ where: { id }, data: { order } });
           break;
       }
     }

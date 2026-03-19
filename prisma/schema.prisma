@@ -15,6 +15,27 @@ model User {
   name       String?
   createdAt  DateTime   @default(now())
   categories Category[]
+  streaks    Streak[]
+}
+
+model Streak {
+  id        String      @id @default(cuid())
+  name      String
+  order     Int         @default(0)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+  logs      StreakLog[]
+}
+
+model StreakLog {
+  id        String   @id @default(cuid())
+  date      String
+  streakId  String
+  streak    Streak   @relation(fields: [streakId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([streakId, date])
 }
 
 model Category {
@@ -57,6 +78,7 @@ model Note {
   id        String   @id @default(cuid())
   title     String?
   content   String
+  order     Int      @default(0)
   roomId    String
   room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
@@ -67,6 +89,7 @@ model Link {
   id        String   @id @default(cuid())
   title     String?
   url       String
+  order     Int      @default(0)
   roomId    String
   room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
@@ -79,6 +102,7 @@ model File {
   size      Int
   mimeType  String
   type      String
+  order     Int      @default(0)
   roomId    String
   room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())

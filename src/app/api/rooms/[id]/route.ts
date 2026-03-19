@@ -14,9 +14,9 @@ export async function GET(
     where: { id },
     include: {
       subject: { include: { category: true } },
-      notes: { orderBy: { updatedAt: "desc" } },
-      links: { orderBy: { createdAt: "desc" } },
-      files: { orderBy: { createdAt: "desc" } },
+      notes: { orderBy: [{ order: "asc" }, { updatedAt: "desc" }] },
+      links: { orderBy: [{ order: "asc" }, { createdAt: "desc" }] },
+      files: { orderBy: [{ order: "asc" }, { createdAt: "desc" }] },
     },
   });
   if (!room) return NextResponse.json({ error: "Room not found" }, { status: 404 });

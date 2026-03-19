@@ -23,6 +23,7 @@ import Header from "@/components/ui/Header";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EmptyState from "@/components/ui/EmptyState";
+import SortableList from "@/components/ui/SortableList";
 import { formatFileSize } from "@/lib/utils";
 
 type Tab = "notes" | "links" | "files" | "images";
@@ -93,6 +94,7 @@ export default function RoomPage({
   const [saving, setSaving] = useState(false);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
 
   const fetchRoom = useCallback(async () => {
     const res = await fetch(`/api/rooms/${roomId}`);
@@ -196,6 +198,23 @@ export default function RoomPage({
     fetchRoom();
   }
 
+  async function handleReorder(model: "note" | "link" | "file", reordered: { id: string }[]) {
+    if (!room) return;
+    const updated = { ...room };
+    if (model === "note") updated.notes = reordered as Note[];
+    else if (model === "link") updated.links = reordered as LinkItem[];
+    else updated.files = reordered as FileItem[];
+    setRoom(updated);
+    await fetch("/api/reorder", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        items: reordered.map((item, i) => ({ id: item.id, order: i })),
+      }),
+    });
+  }
+
   const tabs: { key: Tab; label: string; icon: React.ReactNode; count: number }[] = [
     { key: "notes", label: "Notes", icon: <StickyNote size={16} />, count: room?.notes.length ?? 0 },
     { key: "links", label: "Links", icon: <Link2 size={16} />, count: room?.links.length ?? 0 },
@@ -225,7 +244,7 @@ export default function RoomPage({
 
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
-      <Header title={room.name} showBack />
+      <Header title={room.name} showBack reorderMode={reorderMode} onToggleReorder={() => setReorderMode((v) => !v)} />
 
       {/* Tabs */}
       <div className="bg-white dark:bg-slate-900 border-b border-slate-200/60 dark:border-slate-700/60 sticky top-[57px] z-30">
@@ -264,41 +283,49 @@ export default function RoomPage({
             {room.notes.length === 0 ? (
               <EmptyState title="No notes yet" description="Add a note to get started" icon={<StickyNote size={28} />} />
             ) : (
-              room.notes.map((note, i) => (
-                <div key={note.id} className="bg-white dark:bg-slate-900 rounded-2xl ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-sm dark:shadow-slate-950/20 animate-fade-in overflow-hidden" style={{ animationDelay: `${i * 40}ms` }}>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
-                      {note.title || "Untitled Note"}
-                    </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed mt-1.5">{note.content}</p>
-                  </div>
-                  <div className="flex items-center justify-between px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-                    <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
-                      <Clock size={11} />
-                      {new Date(note.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+              <SortableList
+                items={room.notes}
+                enabled={reorderMode}
+                onReorder={(reordered) => handleReorder("note", reordered)}
+                className="space-y-3"
+                renderItem={(note, i) => (
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-sm dark:shadow-slate-950/20 animate-fade-in overflow-hidden" style={{ animationDelay: `${i * 40}ms` }}>
+                    <div className="p-4">
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                        {note.title || "Untitled Note"}
+                      </h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed mt-1.5">{note.content}</p>
                     </div>
-                    <div className="flex items-center gap-0.5">
-                      <button
-                        onClick={() => {
-                          setEditNote(note);
-                          setNoteTitle(note.title || "");
-                          setNoteContent(note.content);
-                          setShowNoteModal(true);
-                        }}
-                        className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-200/70 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteItem({ type: "note", id: note.id, name: note.title || "Untitled Note" })}
-                        className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-red-100 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                    <div className="flex items-center justify-between px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+                      <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                        <Clock size={11} />
+                        {new Date(note.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                      </div>
+                      {!reorderMode && (
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            onClick={() => {
+                              setEditNote(note);
+                              setNoteTitle(note.title || "");
+                              setNoteContent(note.content);
+                              setShowNoteModal(true);
+                            }}
+                            className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-200/70 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => setDeleteItem({ type: "note", id: note.id, name: note.title || "Untitled Note" })}
+                            className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-red-100 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))
+                )}
+              />
             )}
           </div>
         )}
@@ -309,60 +336,68 @@ export default function RoomPage({
             {room.links.length === 0 ? (
               <EmptyState title="No links yet" description="Save useful links here" icon={<Link2 size={28} />} />
             ) : (
-              room.links.map((link, i) => (
-                <div key={link.id} className="bg-white dark:bg-slate-900 rounded-2xl ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-sm dark:shadow-slate-950/20 p-4 flex items-center justify-between animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
-                  <div className="flex items-center gap-3 min-w-0 flex-1 mr-3">
-                    <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-blue-500 dark:text-blue-400 flex items-center justify-center shrink-0">
-                      <Link2 size={16} />
+              <SortableList
+                items={room.links}
+                enabled={reorderMode}
+                onReorder={(reordered) => handleReorder("link", reordered)}
+                className="space-y-2"
+                renderItem={(link, i) => (
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-sm dark:shadow-slate-950/20 p-4 flex items-center justify-between animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
+                    <div className="flex items-center gap-3 min-w-0 flex-1 mr-3">
+                      <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-blue-500 dark:text-blue-400 flex items-center justify-center shrink-0">
+                        <Link2 size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">
+                          {link.title || link.url}
+                        </h3>
+                        {link.title && (
+                          <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">{link.url}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">
-                        {link.title || link.url}
-                      </h3>
-                      {link.title && (
-                        <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">{link.url}</p>
-                      )}
-                    </div>
+                    {!reorderMode && (
+                      <div className="flex gap-0.5 shrink-0">
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
+                        >
+                          <ExternalLink size={15} />
+                        </a>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(link.url);
+                            setCopiedLinkId(link.id);
+                            setTimeout(() => setCopiedLinkId(null), 2000);
+                          }}
+                          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                        >
+                          {copiedLinkId === link.id ? <Check size={15} className="text-green-500" /> : <Copy size={15} />}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditLink(link);
+                            setLinkTitle(link.title || "");
+                            setLinkUrl(link.url);
+                            setShowLinkModal(true);
+                          }}
+                          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteItem({ type: "link", id: link.id, name: link.title || link.url })}
+                          className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex gap-0.5 shrink-0">
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
-                    >
-                      <ExternalLink size={15} />
-                    </a>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(link.url);
-                        setCopiedLinkId(link.id);
-                        setTimeout(() => setCopiedLinkId(null), 2000);
-                      }}
-                      className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                    >
-                      {copiedLinkId === link.id ? <Check size={15} className="text-green-500" /> : <Copy size={15} />}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditLink(link);
-                        setLinkTitle(link.title || "");
-                        setLinkUrl(link.url);
-                        setShowLinkModal(true);
-                      }}
-                      className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                    >
-                      <Pencil size={15} />
-                    </button>
-                    <button
-                      onClick={() => setDeleteItem({ type: "link", id: link.id, name: link.title || link.url })}
-                      className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-              ))
+                )}
+              />
             )}
           </div>
         )}
@@ -373,30 +408,38 @@ export default function RoomPage({
             {docs.length === 0 ? (
               <EmptyState title="No files yet" description="Upload PDFs and documents" icon={<FileText size={28} />} />
             ) : (
-              docs.map((file, i) => (
-                <div key={file.id} className="bg-white dark:bg-slate-900 rounded-2xl ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-sm dark:shadow-slate-950/20 p-4 flex items-center justify-between animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-9 h-9 rounded-lg bg-orange-50 dark:bg-orange-950/30 text-orange-500 dark:text-orange-400 flex items-center justify-center shrink-0">
-                      <FileText size={16} />
+              <SortableList
+                items={docs}
+                enabled={reorderMode}
+                onReorder={(reordered) => handleReorder("file", reordered)}
+                className="space-y-2"
+                renderItem={(file, i) => (
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-sm dark:shadow-slate-950/20 p-4 flex items-center justify-between animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-9 h-9 rounded-lg bg-orange-50 dark:bg-orange-950/30 text-orange-500 dark:text-orange-400 flex items-center justify-center shrink-0">
+                        <FileText size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">{file.name}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{formatFileSize(file.size)}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">{file.name}</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{formatFileSize(file.size)}</p>
-                    </div>
+                    {!reorderMode && (
+                      <div className="flex gap-0.5 shrink-0">
+                        <a href={file.path} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                          <Eye size={15} />
+                        </a>
+                        <a href={file.path} download={file.name} className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors">
+                          <Download size={15} />
+                        </a>
+                        <button onClick={() => setDeleteItem({ type: "file", id: file.id, name: file.name })} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors">
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex gap-0.5 shrink-0">
-                    <a href={file.path} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
-                      <Eye size={15} />
-                    </a>
-                    <a href={file.path} download={file.name} className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors">
-                      <Download size={15} />
-                    </a>
-                    <button onClick={() => setDeleteItem({ type: "file", id: file.id, name: file.name })} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors">
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-              ))
+                )}
+              />
             )}
           </div>
         )}
@@ -407,37 +450,47 @@ export default function RoomPage({
             {images.length === 0 ? (
               <EmptyState title="No images yet" description="Upload screenshots and diagrams" icon={<ImageIcon size={28} />} />
             ) : (
-              images.map((img, i) => (
-                <div key={img.id} className="bg-white dark:bg-slate-900 rounded-2xl ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-sm dark:shadow-slate-950/20 overflow-hidden animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
-                  <div className="w-full cursor-pointer" onClick={() => setPreviewImage(img)}>
-                    <NextImage src={img.path} alt={img.name} width={800} height={400} className="w-full max-h-64 object-contain bg-slate-50 dark:bg-slate-800" unoptimized />
-                  </div>
-                  <div className="flex items-center justify-between p-3.5 border-t border-slate-100 dark:border-slate-800">
-                    <div className="min-w-0 flex-1 mr-3">
-                      <p className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">{img.name}</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{formatFileSize(img.size)}</p>
+              <SortableList
+                items={images}
+                enabled={reorderMode}
+                onReorder={(reordered) => handleReorder("file", reordered)}
+                className="space-y-3"
+                renderItem={(img, i) => (
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-sm dark:shadow-slate-950/20 overflow-hidden animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
+                    {!reorderMode && (
+                      <div className="w-full cursor-pointer" onClick={() => setPreviewImage(img)}>
+                        <NextImage src={img.path} alt={img.name} width={800} height={400} className="w-full max-h-64 object-contain bg-slate-50 dark:bg-slate-800" unoptimized />
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between p-3.5 border-t border-slate-100 dark:border-slate-800">
+                      <div className="min-w-0 flex-1 mr-3">
+                        <p className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">{img.name}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{formatFileSize(img.size)}</p>
+                      </div>
+                      {!reorderMode && (
+                        <div className="flex gap-0.5 shrink-0">
+                          <button onClick={() => setPreviewImage(img)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors" title="View full screen">
+                            <Eye size={15} />
+                          </button>
+                          <a href={img.path} download={img.name} className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors" title="Download">
+                            <Download size={15} />
+                          </a>
+                          <button onClick={() => setDeleteItem({ type: "file", id: img.id, name: img.name })} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors" title="Delete">
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex gap-0.5 shrink-0">
-                      <button onClick={() => setPreviewImage(img)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors" title="View full screen">
-                        <Eye size={15} />
-                      </button>
-                      <a href={img.path} download={img.name} className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors" title="Download">
-                        <Download size={15} />
-                      </a>
-                      <button onClick={() => setDeleteItem({ type: "file", id: img.id, name: img.name })} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors" title="Delete">
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
                   </div>
-                </div>
-              ))
+                )}
+              />
             )}
           </div>
         )}
       </main>
 
       {/* FAB */}
-      <button
+      {!reorderMode && <button
         onClick={() => {
           if (activeTab === "notes") { setEditNote(null); setNoteTitle(""); setNoteContent(""); setShowNoteModal(true); }
           else if (activeTab === "links") { setEditLink(null); setLinkTitle(""); setLinkUrl(""); setShowLinkModal(true); }
@@ -446,7 +499,7 @@ export default function RoomPage({
         className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl shadow-lg shadow-blue-300 dark:shadow-blue-950/30 flex items-center justify-center hover:shadow-xl active:scale-95 transition-all z-30"
       >
         <Plus size={22} strokeWidth={2.5} />
-      </button>
+      </button>}
 
       {/* Note Modal */}
       <Modal open={showNoteModal} onClose={resetNoteForm} title={editNote ? "Edit Note" : "New Note"}>

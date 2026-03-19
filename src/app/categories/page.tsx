@@ -8,6 +8,7 @@ import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EmptyState from "@/components/ui/EmptyState";
 import SortableList from "@/components/ui/SortableList";
+import StreakTracker from "@/components/ui/StreakTracker";
 
 interface Category {
   id: string;
@@ -115,6 +116,7 @@ export default function CategoriesPage() {
       <Header title="My Study Room" reorderMode={reorderMode} onToggleReorder={() => setReorderMode((v) => !v)} />
 
       <main className="max-w-4xl mx-auto px-4 py-6">
+        <StreakTracker />
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
