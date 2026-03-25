@@ -6,24 +6,24 @@ export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [streaks, user] = await Promise.all([
-    prisma.streak.findMany({
-      where: { userId: session.user.id },
-      orderBy: { order: "asc" },
-      include: {
-        logs: {
-          orderBy: { date: "desc" },
-          take: 60,
+  const syllabi = await prisma.syllabus.findMany({
+    where: { userId: session.user.id },
+    orderBy: { order: "asc" },
+    include: {
+      members: {
+        include: {
+          progress: { select: { itemId: true } },
         },
       },
-    }),
-    prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { streakLabel: true },
-    }),
-  ]);
+      topics: {
+        include: {
+          _count: { select: { items: true } },
+        },
+      },
+    },
+  });
 
-  return NextResponse.json({ streaks, streakLabel: user?.streakLabel ?? "Streaks" });
+  return NextResponse.json(syllabi);
 }
 
 export async function POST(req: NextRequest) {
@@ -33,11 +33,11 @@ export async function POST(req: NextRequest) {
   const { name } = await req.json();
   if (!name?.trim()) return NextResponse.json({ error: "Name required" }, { status: 400 });
 
-  const count = await prisma.streak.count({ where: { userId: session.user.id } });
+  const count = await prisma.syllabus.count({ where: { userId: session.user.id } });
 
-  const streak = await prisma.streak.create({
+  const syllabus = await prisma.syllabus.create({
     data: { name: name.trim(), userId: session.user.id, order: count },
   });
 
-  return NextResponse.json(streak, { status: 201 });
+  return NextResponse.json(syllabus, { status: 201 });
 }

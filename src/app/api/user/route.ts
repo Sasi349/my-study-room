@@ -23,6 +23,7 @@ export async function GET() {
     username: user.username,
     name: user.name,
     passcode: user.passcode,
+    streakLabel: user.streakLabel,
   });
 }
 
@@ -68,4 +69,26 @@ export async function PUT(req: NextRequest) {
   });
 
   return NextResponse.json({ success: true, message: "Account updated. Please sign in again." });
+}
+
+export async function PATCH(req: NextRequest) {
+  const user = await getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { streakLabel } = await req.json();
+
+  if (typeof streakLabel === "string") {
+    const trimmed = streakLabel.trim();
+    if (!trimmed) return NextResponse.json({ error: "Label cannot be empty" }, { status: 400 });
+    if (trimmed.length > 30) return NextResponse.json({ error: "Label too long" }, { status: 400 });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { streakLabel: trimmed },
+    });
+
+    return NextResponse.json({ streakLabel: trimmed });
+  }
+
+  return NextResponse.json({ error: "No valid fields provided" }, { status: 400 });
 }

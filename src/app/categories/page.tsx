@@ -9,6 +9,7 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EmptyState from "@/components/ui/EmptyState";
 import SortableList from "@/components/ui/SortableList";
 import StreakTracker from "@/components/ui/StreakTracker";
+import BottomNav from "@/components/ui/BottomNav";
 
 interface Category {
   id: string;
@@ -115,7 +116,7 @@ export default function CategoriesPage() {
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
       <Header title="My Study Room" reorderMode={reorderMode} onToggleReorder={() => setReorderMode((v) => !v)} />
 
-      <main className="max-w-4xl mx-auto px-4 py-6">
+      <main className="max-w-4xl mx-auto px-4 py-6 pb-24">
         <StreakTracker />
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -177,7 +178,7 @@ export default function CategoriesPage() {
       {!reorderMode && (
         <button
           onClick={() => { setShowCreate(true); setName(""); }}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl shadow-lg shadow-blue-300 dark:shadow-blue-950/30 flex items-center justify-center hover:shadow-xl active:scale-95 transition-all z-30"
+          className="fixed bottom-20 right-6 w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl shadow-lg shadow-blue-300 dark:shadow-blue-950/30 flex items-center justify-center hover:shadow-xl active:scale-95 transition-all z-30"
         >
           <Plus size={22} strokeWidth={2.5} />
         </button>
@@ -215,6 +216,8 @@ export default function CategoriesPage() {
         message={`Delete "${deleteCategory?.name}"? This will also delete all subjects, rooms, and content inside it.`}
         loading={saving}
       />
+
+      <BottomNav />
     </div>
   );
 }

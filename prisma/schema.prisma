@@ -8,14 +8,16 @@ datasource db {
 }
 
 model User {
-  id         String     @id @default(cuid())
-  username   String     @unique
-  password   String
-  passcode   String?
-  name       String?
-  createdAt  DateTime   @default(now())
-  categories Category[]
-  streaks    Streak[]
+  id           String     @id @default(cuid())
+  username     String     @unique
+  password     String
+  passcode     String?
+  name         String?
+  streakLabel  String     @default("Streaks")
+  createdAt    DateTime   @default(now())
+  categories   Category[]
+  streaks      Streak[]
+  syllabi      Syllabus[]
 }
 
 model Streak {
@@ -106,4 +108,56 @@ model File {
   roomId    String
   room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+model Syllabus {
+  id        String          @id @default(cuid())
+  name      String
+  order     Int             @default(0)
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  members   TrackerMember[]
+  topics    TrackerTopic[]
+}
+
+model TrackerMember {
+  id         String            @id @default(cuid())
+  name       String
+  syllabusId String
+  syllabus   Syllabus          @relation(fields: [syllabusId], references: [id], onDelete: Cascade)
+  createdAt  DateTime          @default(now())
+  progress   TrackerProgress[]
+}
+
+model TrackerTopic {
+  id         String        @id @default(cuid())
+  name       String
+  order      Int           @default(0)
+  syllabusId String
+  syllabus   Syllabus      @relation(fields: [syllabusId], references: [id], onDelete: Cascade)
+  createdAt  DateTime      @default(now())
+  items      TrackerItem[]
+}
+
+model TrackerItem {
+  id        String            @id @default(cuid())
+  name      String
+  order     Int               @default(0)
+  topicId   String
+  topic     TrackerTopic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  createdAt DateTime          @default(now())
+  progress  TrackerProgress[]
+}
+
+model TrackerProgress {
+  id        String        @id @default(cuid())
+  memberId  String
+  member    TrackerMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  itemId    String
+  item      TrackerItem   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+
+  @@unique([memberId, itemId])
 }

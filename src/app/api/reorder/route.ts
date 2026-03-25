@@ -7,7 +7,7 @@ export async function PATCH(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { model, items } = await req.json() as {
-    model: "category" | "subject" | "room" | "note" | "link" | "file" | "streak";
+    model: "category" | "subject" | "room" | "note" | "link" | "file" | "streak" | "syllabus" | "trackerTopic" | "trackerItem";
     items: { id: string; order: number }[];
   };
 
@@ -15,7 +15,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "model and items required" }, { status: 400 });
   }
 
-  if (!["category", "subject", "room", "note", "link", "file", "streak"].includes(model)) {
+  if (!["category", "subject", "room", "note", "link", "file", "streak", "syllabus", "trackerTopic", "trackerItem"].includes(model)) {
     return NextResponse.json({ error: "Invalid model" }, { status: 400 });
   }
 
@@ -42,6 +42,15 @@ export async function PATCH(req: NextRequest) {
           break;
         case "streak":
           await tx.streak.update({ where: { id }, data: { order } });
+          break;
+        case "syllabus":
+          await tx.syllabus.update({ where: { id }, data: { order } });
+          break;
+        case "trackerTopic":
+          await tx.trackerTopic.update({ where: { id }, data: { order } });
+          break;
+        case "trackerItem":
+          await tx.trackerItem.update({ where: { id }, data: { order } });
           break;
       }
     }

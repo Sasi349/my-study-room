@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Flame, Trash2, Pencil, X, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Flame, Trash2, Pencil, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import Modal from "./Modal";
 import ConfirmDialog from "./ConfirmDialog";
 
@@ -90,7 +90,7 @@ export default function StreakTracker() {
     const res = await fetch("/api/streaks");
     if (res.ok) {
       const data = await res.json();
-      setStreaks(data);
+      setStreaks(data.streaks);
     }
     setLoading(false);
   }, []);
@@ -236,7 +236,7 @@ export default function StreakTracker() {
               return (
                 <div key={streak.id}>
                   {/* Streak Name Row */}
-                  <div className="flex items-center gap-1.5 mb-1 group">
+                  <div className="flex items-center gap-1.5 mb-1">
                     <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
                       {streak.name}
                     </span>
@@ -246,18 +246,18 @@ export default function StreakTracker() {
                         {currentStreak}
                       </span>
                     )}
-                    <div className="hidden group-hover:flex items-center gap-0 shrink-0 ml-auto">
+                    <div className="flex items-center gap-0.5 shrink-0 ml-auto">
                       <button
                         onClick={() => { setEditStreak(streak); setName(streak.name); }}
-                        className="p-0.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                        className="p-1 rounded-md text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                       >
-                        <Pencil size={10} />
+                        <Pencil size={12} />
                       </button>
                       <button
                         onClick={() => setDeleteStreak(streak)}
-                        className="p-0.5 rounded text-slate-400 hover:text-red-500 transition-colors"
+                        className="p-1 rounded-md text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
                       >
-                        <Trash2 size={10} />
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   </div>
