@@ -1,0 +1,36 @@
+name: Push Notifications
+
+on:
+  schedule:
+    # 6 AM IST = 00:30 UTC
+    - cron: "30 0 * * *"
+    # 7 AM IST = 01:30 UTC
+    - cron: "30 1 * * *"
+    # 5 PM IST = 11:30 UTC
+    - cron: "30 11 * * *"
+    # 6 PM IST = 12:30 UTC
+    - cron: "30 12 * * *"
+    # 7 PM IST = 13:30 UTC
+    - cron: "30 13 * * *"
+
+jobs:
+  send-notifications:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send push notifications
+        run: |
+          # Determine which slot to send based on the hour
+          HOUR=$(date -u +%H)
+
+          case $HOUR in
+            00) SLOT="6am" ;;
+            01) SLOT="7am" ;;
+            11) SLOT="5pm" ;;
+            12) SLOT="6pm" ;;
+            13) SLOT="7pm" ;;
+            *) exit 0 ;;
+          esac
+
+          curl -X POST "${{ secrets.APP_URL }}/api/push/send?slot=$SLOT" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"
