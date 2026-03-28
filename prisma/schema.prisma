@@ -8,16 +8,18 @@ datasource db {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  username     String     @unique
-  password     String
-  passcode     String?
-  name         String?
-  streakLabel  String     @default("Streaks")
-  createdAt    DateTime   @default(now())
-  categories   Category[]
-  streaks      Streak[]
-  syllabi      Syllabus[]
+  id                 String             @id @default(cuid())
+  username           String             @unique
+  password           String
+  passcode           String?
+  name               String?
+  streakLabel        String             @default("Streaks")
+  createdAt          DateTime           @default(now())
+  categories         Category[]
+  streaks            Streak[]
+  syllabi            Syllabus[]
+  timeTrackers       TimeTracker[]
+  pushSubscriptions  PushSubscription[]
 }
 
 model Streak {
@@ -45,7 +47,7 @@ model Category {
   name      String
   icon      String?
   order     Int       @default(0)
-  userId    String    @default("")
+  userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -160,4 +162,44 @@ model TrackerProgress {
   createdAt DateTime      @default(now())
 
   @@unique([memberId, itemId])
+}
+
+model TimeTracker {
+  id        String              @id @default(cuid())
+  name      String
+  order     Int                 @default(0)
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  members   TimeTrackerMember[]
+}
+
+model TimeTrackerMember {
+  id        String      @id @default(cuid())
+  name      String
+  trackerId String
+  tracker   TimeTracker @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+  entries   TimeEntry[]
+}
+
+model TimeEntry {
+  id        String            @id @default(cuid())
+  date      String
+  minutes   Int
+  note      String?
+  memberId  String
+  member    TimeTrackerMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime          @default(now())
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
 }

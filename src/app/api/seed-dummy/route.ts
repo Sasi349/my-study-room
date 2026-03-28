@@ -55,6 +55,14 @@ export async function GET() {
     return NextResponse.json({ message: "Dummy data already exists", categories: count });
   }
 
+  // Get or create a demo user for seeded content
+  let demoUser = await prisma.user.findUnique({ where: { username: "demo" } });
+  if (!demoUser) {
+    demoUser = await prisma.user.create({
+      data: { username: "demo", password: "demo123", name: "Demo User" },
+    });
+  }
+
   let totalSubjects = 0;
   let totalRooms = 0;
   let totalNotes = 0;
@@ -62,7 +70,7 @@ export async function GET() {
 
   for (let i = 0; i < categories.length; i++) {
     const category = await prisma.category.create({
-      data: { name: categories[i], order: i },
+      data: { name: categories[i], order: i, userId: demoUser.id },
     });
 
     const subjects = subjectsMap[categories[i]] || [];
