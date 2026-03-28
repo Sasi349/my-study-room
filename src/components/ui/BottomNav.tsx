@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ClipboardCheck } from "lucide-react";
+import { Home, Clock, ClipboardCheck } from "lucide-react";
 
 const tabs = [
   { href: "/categories", label: "Home", icon: Home },
   { href: "/tracker", label: "Tracker", icon: ClipboardCheck },
+  { href: "/time-tracker", label: "Time Tracker", icon: Clock },
 ];
 
 export default function BottomNav() {
