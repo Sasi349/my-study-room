@@ -15,6 +15,8 @@ import TimeTrackerChart from "@/components/TimeTrackerChart";
 interface TimeEntry {
   id: string;
   date: string;
+  startTime: string | null;
+  endTime: string | null;
   minutes: number;
   note: string | null;
   memberId: string;
@@ -186,6 +188,8 @@ export default function TimeTrackerDetailPage() {
       body: JSON.stringify({
         memberId: selectedMemberId,
         date: entryDate,
+        startTime: entryStartTime,
+        endTime: entryEndTime,
         minutes: totalMinutes,
         note: entryNote.trim() || null,
       }),
@@ -207,6 +211,8 @@ export default function TimeTrackerDetailPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         date: entryDate,
+        startTime: entryStartTime,
+        endTime: entryEndTime,
         minutes: totalMinutes,
         note: entryNote.trim() || null,
       }),
@@ -388,16 +394,22 @@ export default function TimeTrackerDetailPage() {
                           onClick={() => {
                             setEditEntry(entry);
                             setEntryDate(entry.date);
-                            // Set start time to 9:00 AM and calculate end time from minutes
-                            const startHour = 9;
-                            const startMin = 0;
-                            const startStr = `${String(startHour).padStart(2, "0")}:${String(startMin).padStart(2, "0")}`;
-                            const endTotalMin = (startHour * 60 + startMin) + entry.minutes;
-                            const endHour = Math.floor(endTotalMin / 60) % 24;
-                            const endMin = endTotalMin % 60;
-                            const endStr = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
-                            setEntryStartTime(startStr);
-                            setEntryEndTime(endStr);
+                            if (entry.startTime && entry.endTime) {
+                              setEntryStartTime(entry.startTime);
+                              setEntryEndTime(entry.endTime);
+                            } else {
+                              // Legacy entry: no stored start/end. Fall back to
+                              // 09:00-based reconstruction so old rows stay editable.
+                              const startHour = 9;
+                              const startMin = 0;
+                              const startStr = `${String(startHour).padStart(2, "0")}:${String(startMin).padStart(2, "0")}`;
+                              const endTotalMin = (startHour * 60 + startMin) + entry.minutes;
+                              const endHour = Math.floor(endTotalMin / 60) % 24;
+                              const endMin = endTotalMin % 60;
+                              const endStr = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
+                              setEntryStartTime(startStr);
+                              setEntryEndTime(endStr);
+                            }
                             setEntryNote(entry.note || "");
                           }}
                           className="p-1 rounded-md text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 transition-colors"
@@ -538,16 +550,22 @@ export default function TimeTrackerDetailPage() {
                                   onClick={() => {
                                     setEditEntry(entry);
                                     setEntryDate(entry.date);
-                                    // Set start time to 9:00 AM and calculate end time from minutes
-                                    const startHour = 9;
-                                    const startMin = 0;
-                                    const startStr = `${String(startHour).padStart(2, "0")}:${String(startMin).padStart(2, "0")}`;
-                                    const endTotalMin = (startHour * 60 + startMin) + entry.minutes;
-                                    const endHour = Math.floor(endTotalMin / 60) % 24;
-                                    const endMin = endTotalMin % 60;
-                                    const endStr = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
-                                    setEntryStartTime(startStr);
-                                    setEntryEndTime(endStr);
+                                    if (entry.startTime && entry.endTime) {
+                                      setEntryStartTime(entry.startTime);
+                                      setEntryEndTime(entry.endTime);
+                                    } else {
+                                      // Legacy entry: no stored start/end. Fall back to
+                                      // 09:00-based reconstruction so old rows stay editable.
+                                      const startHour = 9;
+                                      const startMin = 0;
+                                      const startStr = `${String(startHour).padStart(2, "0")}:${String(startMin).padStart(2, "0")}`;
+                                      const endTotalMin = (startHour * 60 + startMin) + entry.minutes;
+                                      const endHour = Math.floor(endTotalMin / 60) % 24;
+                                      const endMin = endTotalMin % 60;
+                                      const endStr = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
+                                      setEntryStartTime(startStr);
+                                      setEntryEndTime(endStr);
+                                    }
                                     setEntryNote(entry.note || "");
                                   }}
                                   className="p-0.5 rounded text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 transition-colors"

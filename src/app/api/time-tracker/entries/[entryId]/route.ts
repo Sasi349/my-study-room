@@ -10,7 +10,15 @@ export async function PUT(
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { entryId } = await params;
-  const { date, minutes, note } = await req.json();
+  const { date, minutes, note, startTime, endTime } = await req.json();
+
+  const timeRegex = /^\d{2}:\d{2}$/;
+  if (startTime != null && !timeRegex.test(startTime)) {
+    return NextResponse.json({ error: "startTime must be HH:MM" }, { status: 400 });
+  }
+  if (endTime != null && !timeRegex.test(endTime)) {
+    return NextResponse.json({ error: "endTime must be HH:MM" }, { status: 400 });
+  }
 
   const entry = await prisma.timeEntry.findUnique({
     where: { id: entryId },
@@ -25,6 +33,8 @@ export async function PUT(
     data: {
       ...(date && { date }),
       ...(minutes && minutes > 0 && { minutes }),
+      ...(startTime !== undefined && { startTime: startTime ?? null }),
+      ...(endTime !== undefined && { endTime: endTime ?? null }),
       ...(note !== undefined && { note: note?.trim() || null }),
     },
   });

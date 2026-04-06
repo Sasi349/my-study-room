@@ -186,6 +186,8 @@ model TimeTrackerMember {
 model TimeEntry {
   id        String            @id @default(cuid())
   date      String
+  startTime String?
+  endTime   String?
   minutes   Int
   note      String?
   memberId  String

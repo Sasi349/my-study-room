@@ -13,11 +13,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { memberId, date, minutes, note } = body;
+  const { memberId, date, minutes, note, startTime, endTime } = body;
 
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
   if (!memberId || !date || !minutes || minutes <= 0 || !dateRegex.test(date)) {
     return NextResponse.json({ error: "memberId, date (YYYY-MM-DD), and positive minutes required" }, { status: 400 });
+  }
+
+  const timeRegex = /^\d{2}:\d{2}$/;
+  if (startTime != null && !timeRegex.test(startTime)) {
+    return NextResponse.json({ error: "startTime must be HH:MM" }, { status: 400 });
+  }
+  if (endTime != null && !timeRegex.test(endTime)) {
+    return NextResponse.json({ error: "endTime must be HH:MM" }, { status: 400 });
   }
 
   const member = await prisma.timeTrackerMember.findUnique({
@@ -32,6 +40,8 @@ export async function POST(req: NextRequest) {
     data: {
       date,
       minutes,
+      startTime: startTime ?? null,
+      endTime: endTime ?? null,
       note: note?.trim() || null,
       memberId,
     },
