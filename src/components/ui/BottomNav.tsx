@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Clock, ClipboardCheck } from "lucide-react";
+import { Home, Clock, ClipboardCheck, Menu } from "lucide-react";
 
 const tabs = [
   { href: "/categories", label: "Home", icon: Home },
   { href: "/tracker", label: "Tracker", icon: ClipboardCheck },
   { href: "/time-tracker", label: "Time Tracker", icon: Clock },
+  { href: "/menu", label: "Menu", icon: Menu },
 ];
 
 export default function BottomNav() {
@@ -22,7 +23,7 @@ export default function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-col items-center gap-0.5 px-6 py-1.5 rounded-xl transition-colors ${
+              className={`flex-1 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-colors ${
                 isActive
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"

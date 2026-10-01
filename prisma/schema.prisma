@@ -19,6 +19,28 @@ model User {
   streaks            Streak[]
   syllabi            Syllabus[]
   timeTrackers       TimeTracker[]
+  articleMembers     ArticleMember[]
+}
+
+// People tracking the Menu → Articles checklist (like TrackerMember, but per account)
+model ArticleMember {
+  id        String            @id @default(cuid())
+  name      String
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime          @default(now())
+  progress  ArticleProgress[]
+}
+
+// Constitution articles a member has completed (article list lives in src/lib/constitution-articles.ts)
+model ArticleProgress {
+  id        String        @id @default(cuid())
+  articleId String
+  memberId  String
+  member    ArticleMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+
+  @@unique([memberId, articleId])
 }
 
 model Streak {
